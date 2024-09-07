@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "cNJt6PiQPHgYTr1ho5rNGpjxSY7Vmk8YjOT2ujqLf9s=",
+  "Source": "IntegrationFirebaseApi",
+  "BasePath": "_content/IntegrationFirebaseApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
