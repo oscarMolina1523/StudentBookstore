@@ -1,67 +1,79 @@
 using Google.Cloud.Firestore;
-using IntegrationFirebaseApi.Models.Entity;
-using IntegrationFirebaseApi.Models.Dtos;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace IntegrationFirebaseApi.Services
 {
-    public class FirestoreService
+    public class FirestoreService<T> where T : class
     {
         private readonly FirestoreDb _firestoreDb;
-        private const string collectionName = "User";
+        private readonly string _collectionName;
 
-        public FirestoreService(){
+        public FirestoreService(string collectionName)
+        {
             _firestoreDb = FirestoreDb.Create("libreriaestudiante-76afb");
+            _collectionName = collectionName;
         }
 
-        public async Task<UserEntity> CreateUser(UserEntity user){
-            try{
-                DocumentReference doc = _firestoreDb.Collection(collectionName).Document();
-                user.Id= doc.Id;
-                await doc.SetAsync(user);
-                return user;
-            }catch(Exception ex){
+        public async Task<T> CreateDocument(T entity)
+        {
+            try
+            {
+                DocumentReference docRef = _firestoreDb.Collection(_collectionName).Document();
+                var propertyInfo = entity.GetType().GetProperty("Id");
+                if (propertyInfo != null)
+                {
+                    propertyInfo.SetValue(entity, docRef.Id);
+                }
+                await docRef.SetAsync(entity);
+                return entity;
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine(ex);
                 throw;
             }
         }
 
-        public async Task<List<UserEntity>> GetAllUsers(){
-            try{
-                //recorda QuerySnapshot son uno o varios documentos que se pueden almacenar
-                //y DocumentSnapshot es uno unicamente
-                QuerySnapshot snapshot = await _firestoreDb.Collection(collectionName).GetSnapshotAsync();
-                List<UserEntity> users = new List<UserEntity>();
-                
+        public async Task<List<T>> GetAllDocuments()
+        {
+            try
+            {
+                QuerySnapshot snapshot = await _firestoreDb.Collection(_collectionName).GetSnapshotAsync();
+                List<T> documents = new List<T>();
+
                 foreach (DocumentSnapshot document in snapshot.Documents)
                 {
                     if (document.Exists)
                     {
-                        UserEntity user = document.ConvertTo<UserEntity>(); 
-                        users.Add(user);
+                        T entity = document.ConvertTo<T>();
+                        documents.Add(entity);
                     }
                 }
-                return users;
-            }catch(Exception ex){
+
+                return documents;
+            }
+            catch (Exception ex)
+            {
                 Console.WriteLine(ex);
                 throw;
             }
         }
 
-        public async Task<UserEntity> GetUserById(string id)
+        public async Task<T> GetDocumentById(string documentId)
         {
             try
             {
-                DocumentReference docRef = _firestoreDb.Collection(collectionName).Document(id);
+                DocumentReference docRef = _firestoreDb.Collection(_collectionName).Document(documentId);
                 DocumentSnapshot snapshot = await docRef.GetSnapshotAsync();
 
                 if (snapshot.Exists)
                 {
-                    return snapshot.ConvertTo<UserEntity>(); // recuerda mae siempre hay que convertir 
+                    return snapshot.ConvertTo<T>();
                 }
-                else
-                {
-                    return null; 
-                }
+
+                return null;
             }
             catch (Exception ex)
             {
@@ -69,20 +81,17 @@ namespace IntegrationFirebaseApi.Services
                 throw;
             }
         }
-        
-        public async Task<UserEntity> UpdateUser(string userId, UserDto userDto)
+
+        public async Task<T> UpdateDocument(string documentId, Dictionary<string, object> updates)
         {
             try
             {
                 //este DocumentReference solo es una referencia del documento no el documento
-                DocumentReference docRef = _firestoreDb.Collection(collectionName).Document(userId);
-                var updateFields = new Dictionary<string, object>{
-                    { "FullName", userDto.FullName },
-                    { "Email", userDto.Email }
-                };
-                await docRef.UpdateAsync(updateFields); // Aca solo los actualiza los campos que le pasé
-                DocumentSnapshot updatedSnapshot = await docRef.GetSnapshotAsync(); // Obtengo los datos ya actualizado
-                return updatedSnapshot.ConvertTo<UserEntity>(); // DRetorno los datos
+                DocumentReference docRef = _firestoreDb.Collection(_collectionName).Document(documentId);
+                await docRef.UpdateAsync(updates);
+
+                DocumentSnapshot updatedSnapshot = await docRef.GetSnapshotAsync();// Obtengo los datos ya actualizado
+                return updatedSnapshot.ConvertTo<T>();
             }
             catch (Exception ex)
             {
@@ -91,21 +100,19 @@ namespace IntegrationFirebaseApi.Services
             }
         }
 
-
-        public async Task<bool> DeleteUser(string id)
+        public async Task<bool> DeleteDocument(string documentId)
         {
             try
             {
-                DocumentReference docRef = _firestoreDb.Collection(collectionName).Document(id);
-                await docRef.DeleteAsync(); 
-                return true; 
+                DocumentReference docRef = _firestoreDb.Collection(_collectionName).Document(documentId);
+                await docRef.DeleteAsync();
+                return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
-                return false; 
+                return false;
             }
         }
-
     }
 }

@@ -9,16 +9,16 @@ namespace IntegrationFirebaseApi.Controllers
   [Route("api/[controller]")]
   public class UserController : ControllerBase
   {
-    private readonly FirestoreService _firestoreService;
+    private readonly FirestoreService<UserEntity> _firestoreService;
 
-    public UserController(FirestoreService firestoreService){
-      _firestoreService=firestoreService;
+    public UserController(){
+      _firestoreService=new FirestoreService<UserEntity>("User");
     }
       [HttpGet]
       public async Task<IActionResult> GetData()
       {
         try{
-          var users = await _firestoreService.GetAllUsers();
+          var users = await _firestoreService.GetAllDocuments();
            if (users == null || users.Count == 0)
             {
               return NotFound("No se encontraron usuarios.");
@@ -34,7 +34,7 @@ namespace IntegrationFirebaseApi.Controllers
       [HttpGet("{id}")]
       public async Task<IActionResult> GetUserById([FromRoute] string id){
         try{
-          var user=await _firestoreService.GetUserById(id);
+          var user=await _firestoreService.GetDocumentById(id);
           return Ok(user);
         }catch(Exception ex){
           Console.WriteLine(ex);
@@ -44,16 +44,18 @@ namespace IntegrationFirebaseApi.Controllers
 
       [HttpPost]
       public async Task<IActionResult> CreateUser([FromBody] UserDto userDto){
-
+        string id =Guid.NewGuid().ToString();
         UserEntity user = new UserEntity
         {
+          Id= id,
           FullName=userDto.FullName,
           Email=userDto.Email,
         };
+        Console.WriteLine(user);
 
         try{
 
-          await _firestoreService.CreateUser(user);
+          await _firestoreService.CreateDocument(user);
           return StatusCode(201,"usuario creado correctamente ");
 
         }catch(Exception ex){
@@ -67,7 +69,12 @@ namespace IntegrationFirebaseApi.Controllers
       [HttpPut("{id}")]
       public async Task<IActionResult> Update([FromRoute] string id,[FromBody] UserDto userDto){
         try{
-          await _firestoreService.UpdateUser(id, userDto);
+          var updates = new Dictionary<string, object>
+            {
+              { "FullName", userDto.FullName },
+              { "Email", userDto.Email }
+            };
+          await _firestoreService.UpdateDocument(id, updates);
           return Ok("Usuario actualizado de manera correcta");
 
         }catch(Exception ex){
@@ -79,7 +86,7 @@ namespace IntegrationFirebaseApi.Controllers
       [HttpDelete("{id}")]
       public async Task<IActionResult> DeleteData(string id){
         try{
-          await _firestoreService.DeleteUser(id);
+          await _firestoreService.DeleteDocument(id);
           return Ok("el usuario fue eliminado de manera correcta");
 
         }catch(Exception ex){
